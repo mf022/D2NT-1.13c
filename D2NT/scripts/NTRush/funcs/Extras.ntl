@@ -1,0 +1,421 @@
+var Extras =  {
+	Radament: function() {
+		var _rad, _chest, _chestx, _chesty, _radtp;
+
+		if (!Scripts.Radament) {
+			return true;
+		}
+
+		SetStatusText(Rev + "      Running Radament");
+
+		NTTMGR_TownManager();
+
+		if (!NTTM_TownMove("waypoint")) {
+			Common.LogError("NTTM_TownMove()");
+			return false;
+		}
+
+		if (!NTM_TakeWaypoint(48)) {
+			Common.LogError("NTM_TakeWaypoint()");
+			return false;
+		}
+
+		NTP_DoPrecast(true);
+
+		if (!NTM_MoveToStair(me.areaid, 49)) {
+			Common.LogError("NTM_MoveToStair()");
+			return false;
+		}
+
+		if (!NTM_TakeStair(49)) {
+			Common.LogError("NTM_TakeStair()");
+			return false;
+		}
+
+		_chest = GetPresetUnits(me.areaid, NTC_UNIT_OBJECT, 355);
+		_chestx = _chest[0].roomx*5 + _chest[0].x;
+		_chesty = _chest[0].roomy*5 + _chest[0].y;
+					
+		if (_chestx %2 != 0) {
+			if (_chesty %2 != 0) {
+				_radtp = [_chestx - 4, _chesty + 46]; // top right
+			} else {
+			_radtp = [_chestx + 5, _chesty - 42]; // bottom left
+			}
+		}
+
+		if (_chestx %2 == 0) {
+			if (_chesty %2 != 0) {
+				_radtp = [_chestx - 45, _chesty + 10]; // bottom right
+			} else {
+				_radtp = [_chestx + 45, _chesty]; // top left
+			}
+		}
+
+		NTM_MoveTo(me.areaid, _radtp[0], _radtp[1]);
+
+		NTM_MakeTP();
+
+		Say(Messages.radamentup);
+
+		while (!NTC_IsQuesterIn()) {				
+			NTC_TPGuard(15);
+		}
+
+		if (!NTA_KillMonster(229)) {
+			Common.LogError("NTA_KillMonster()");
+			return false;
+		}
+
+		_rad = [me.x, me.y];
+
+		Say(Messages.radamentdown);
+
+		NTA_ClearPosition(30);
+
+		NTSI_PickItems();
+
+		NTM_MoveTo(me.areaid, _rad[0], _rad[1]);
+
+		NTM_MakeTP();
+
+		NTM_UsePortal("BluePortal", 40, me.charname);
+		
+		return true;
+	},
+
+	Tome: function() {
+		if (!Scripts.Tome) {
+			return true;
+		}
+
+		SetStatusText(Rev + "      Running Tome");
+
+		NTTMGR_TownManager();
+
+		if (!NTTM_TownMove("waypoint")) {
+			Common.LogError("NTTM_TownMove()");
+			return false;
+		}
+
+		if (!NTM_TakeWaypoint(80)) {
+			Common.LogError("NTM_TakeWaypoint()");
+			return false;
+		}
+
+		NTP_DoPrecast(true);
+		NTM_MoveToStair(me.areaid, 94);
+		NTM_TakeStair(94);
+		NTC_Delay(500);
+
+		if (!NTM_MoveToPresetUnit(me.areaid, NTC_UNIT_OBJECT, 193)) {
+			Common.LogError("NTM_MoveToPresetUnit()");
+			return false;
+		}
+
+		NTA_ClearPosition(30);
+
+		NTSI_PickItems();
+
+		if (!NTM_MoveToPresetUnit(me.areaid, NTC_UNIT_OBJECT, 193)) {
+			Common.LogError("NTM_MoveToPresetUnit()");
+			return false;
+		}	
+
+		NTM_MakeTP();
+
+		Say(Messages.tomeup);
+
+		while (!NTC_IsQuesterIn()) {
+			NTC_TPGuard(25);
+		}
+
+		NTM_UsePortal("BluePortal", 75, me.charname);
+
+		return true;
+	},
+
+	MoveSafeIzzy: function(areaid, x, y, retry, clearpath) {
+		var i, n, _teleport, _path, _izzy,
+			_retry = 0;
+
+		if (x == me.x && y == me.y) {
+			return true;
+		}
+
+		if (retry === undefined) {
+			retry = 3;
+		}
+
+		if (clearpath === undefined) {
+			clearpath = false;
+		}
+
+		if (NTC_InTown() || NTC_GetSkillLevel(54) < 1) {
+			_teleport = false;
+		} else {
+			_teleport = true;
+		}
+
+		_path = GetPath(areaid, me.x, me.y, x, y, _teleport);
+
+		if (!_path) {
+			return false;
+		}
+
+		for (i = 0 ; i < _path.length ; i++) {
+			for (n = 0 ; n < 2 ; n++) {
+				if (_teleport) {
+					if (NTM_TeleportTo(_path[i][0]+Random(-n, n), _path[i][1]+Random(-n, n))) {
+						break;
+					}
+				} else {
+					if (NTM_WalkTo(_path[i][0], _path[i][1])) {
+						break;
+					}
+				}
+			}
+
+			_izzy = GetPresetUnits(105, NTC_UNIT_MONSTER, 256);
+			if (GetDistance(me.x, me.y, _izzy[0].roomx*5+_izzy[0].x, _izzy[0].roomy*5+_izzy[0].y) <= 60) {
+				return true;
+			}
+
+			if (n < 2) {
+				if (clearpath) {
+					if (!NTA_ClearPosition(20, true, 2)) {
+						Common.LogError("NTA_ClearPosition()");
+						return false;
+					}
+
+					NTP_DoPrecast(false);
+
+					NTM_MoveTo(me.areaid, _path[i][0], _path[i][1], 1);
+				}
+			} else if (_retry < retry) {
+				_path = GetPath(areaid, me.x, me.y, x, y, _teleport);
+
+				if (!_path) {
+					return false;
+				}
+
+				i = -1;
+				_retry++;
+			} else {
+				return false;
+			}
+		}
+		return true;
+	},
+
+	Izual: function() {
+		var _izzy;
+
+		if (!Scripts.Izual) {
+			return true;
+		}
+
+		SetStatusText(Rev + "      Running Izual");
+
+		NTTMGR_TownManager();
+
+		if (!NTTM_TownMove("waypoint")) {
+			Common.LogError("NTTM_TownMove()");
+			return false;
+		}
+
+		if (!NTM_TakeWaypoint(106)) {
+			Common.LogError("NTM_TakeWaypoint()");
+			return false;
+		}
+
+		NTP_DoPrecast(true);
+
+		_izzy = GetPresetUnits(105, NTC_UNIT_MONSTER, 256);
+
+		this.MoveSafeIzzy(me.areaid, _izzy[0].roomx*5+_izzy[0].x, _izzy[0].roomy*5+_izzy[0].y);
+
+		var xx = me.x;
+		var yy = me.y;
+		
+		NTA_ClearPosition(10);
+		NTM_MoveTo(me.areaid, xx, yy);
+
+		NTM_MakeTP();
+
+		Say(Messages.izzyup);
+
+		while (!NTC_IsQuesterIn()) {
+			NTC_TPGuard(10);
+			NTM_MoveTo(me.areaid, xx, yy);
+		}
+
+		NTA_ClearPosition(20);
+
+		NTM_MoveTo(105, _izzy[0].roomx*5+_izzy[0].x, _izzy[0].roomy*5+_izzy[0].y, 0, true);
+
+		if (!NTA_KillMonster(256)) {
+			Common.LogError("NTA_KillMonster()");
+			return false;
+		}
+
+		NTSI_PickItems();
+
+		Say(Messages.izzydown);
+
+		NTM_MoveTo(me.areaid, xx, yy);
+
+		NTM_UsePortal("BluePortal", 103, me.charname);
+
+		return true;
+	},
+
+	Shenk: function() {
+		if (!Scripts.Shenk) {
+			return true;
+		}
+
+		SetStatusText(Rev + "      Running Shenk");
+
+		NTTMGR_TownManager();
+
+		if (!NTTM_TownMove("waypoint")) {
+			Common.LogError("NTTM_TownMove()");
+			return false;
+		}
+
+		if (!NTM_TakeWaypoint(111)) {
+			Common.LogError("NTM_TakeWaypoint()");
+			return false;
+		}
+
+		NTP_DoPrecast(true);	
+
+		if (!NTM_MoveTo(110, 3855, 5125)) {
+			Common.LogError("NTM_MoveTo()");
+			return false;
+		}
+
+		if (NTA_ClearPosition(20)) {
+			NTM_MoveTo(110, 3855, 5125);
+		}
+
+		NTM_MakeTP();
+
+		Say(Messages.shenkup);
+
+		while (!NTC_IsQuesterIn()) {
+			NTC_TPGuard(20);
+		}
+
+		if (!NTA_KillMonster(GetLocaleString(22435))) {
+			Common.LogError("NTA_KillMonster()");
+			return false;
+		}
+
+		Say(Messages.shenkdown);
+
+		if (!NTM_MoveTo(110, 3865, 5125)) {
+			Common.LogError("NTM_MoveTo()");
+			return false;
+		}
+
+		NTM_UsePortal("BluePortal", 109, me.charname);
+
+		return true;
+	},
+
+	GetAnya: function() {
+		_Anya = NTC_FindUnit(NTC_UNIT_OBJECT, 558);
+
+		if (_Anya) {
+			return true;	
+		}
+		return false;
+	},
+
+	Anya: function() {
+		var _Anya;
+
+		if (!Scripts.Anya) {
+			return true;
+		}
+
+		SetStatusText(Rev + "      Running Anya");
+
+		NTTMGR_TownManager();
+
+		if (!NTTM_TownMove("waypoint")) {
+			Common.LogError("NTTM_TownMove()");
+			return false;
+		}
+
+		if (!NTM_TakeWaypoint(113)) {
+			Common.LogError("NTM_TakeWaypoint()");
+			return false;
+		}
+
+		NTP_DoPrecast(true);	
+
+		if (!NTM_MoveToStair(me.areaid, 114)) {
+			Common.LogError("NTM_MoveToStair()");
+			return false;
+		}
+
+		if (!NTM_TakeStair(114)) {
+			Common.LogError("NTM_TakeStair()");
+			return false;
+		}
+
+		if (!NTM_MoveToPresetUnit(me.areaid, NTC_UNIT_OBJECT, 460, -8, -8)) {
+			Common.LogError("NTM_MoveToPresetUnit()");
+			return false;
+		}
+
+		if (!NTA_KillMonster(GetLocaleString(22504))) {
+			Common.LogError("NTA_KillMonster()");
+			return false;
+		}
+
+		NTA_ClearPosition(30);
+
+		NTSI_PickItems();		
+
+		if (NTM_MoveToPresetUnit(me.areaid, 558)) {
+			Common.LogError("NTM_MoveToPresetUnit()");
+			return false;
+		}
+
+		NTA_ClearPosition(25);
+
+		NTSI_PickItems();
+
+		_Anya = NTC_FindUnit(NTC_UNIT_OBJECT, 558);
+
+		if (_Anya) {	
+			if (NTM_MoveTo(_Anya.areaid, _Anya.x+3, _Anya.y)) {
+				NTA_ClearPosition(25);
+				NTSI_PickItems();
+			}
+
+			NTC_OpenChest(_Anya);
+			me.Cancel(0);
+			NTC_Delay(100);
+			me.Cancel(0);
+		}
+
+		NTM_MakeTP();
+
+		Say(Messages.anyaup);
+
+		while (this.GetAnya()) {
+			NTC_TPGuard(25);
+		}
+
+		Say(Messages.anyadown);
+
+		NTM_UsePortal("BluePortal", 109, me.charname);
+		
+		return true;
+	}
+};

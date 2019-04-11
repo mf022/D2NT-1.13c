@@ -1,0 +1,90 @@
+/*
+*	Add in char config:
+*	NTConfig_Script.push("NTGetBO.ntj");
+*	NTConfig_GetBOWP = 35; // wp to get bo from
+*	NTConfig_AfterGetBOWP = 103; // wp to take after bo is given
+*	NTConfig_GetBoWait = 50000; // amount of time to wait before moving on
+*
+*/
+
+var _NTTMGR_BuyPots;
+var _NTTMGR_BuyTP; 
+var _NTTMGR_BuyID;// id in field add
+var _NTTMGR_BuyKey;
+var _NTTMGR_DoHeal;
+var _NTTMGR_DoID;
+var _NTTMGR_DoRepair;
+var _NTTMGR_DoRevive;
+var _NTTMGR_RemoveCurse;
+var _NTTMGR_Simple;
+var _NTTMGR_BuyArrows = false;
+
+
+function NTMain(){
+
+	Include("libs/common/NTCommon.ntl");
+	NTC_IncludeLibs();
+	NTC_IncludeConfig("NTBot/char_configs");
+
+	NT_LoadConfig();
+	NTSI_LoadNIPFiles("NTBot/item_configs");
+
+	NTA_Initialize();
+
+	if (!NTTM_CheckAct()) {
+		NTC_SendMsgToScript("NTBotGame.ntj", "NTTM_CheckAct()");
+		return;
+	}
+
+	NTTMGR_TownManager();
+
+	if (!NTTM_TownMove("waypoint")) {
+		NTC_SendMsgToScript("NTBotGame.ntj", "NTTM_TownMove()");
+		return;
+	}
+
+	if (!NTM_TakeWaypoint(NTConfig_GetBOWP)) {
+		NTC_SendMsgToScript("NTBotGame.ntj", "NTM_TakeWaypoint()");
+		return;
+	}
+
+	NTM_MoveTo(me.areaid, me.x + 4, me.y + 4);
+	Print(COLOR_5 + "Bo me!");
+	NTC_Delay(1000);
+
+	var counting = 0;
+
+	while(!me.GetState(26) || !me.GetState(32) || !me.GetState(51)) {
+		if (counting == NTConfig_GetBoWait && NTConfig_GetBoWait != 0) {
+			Print(COLOR_5 + "Don't have bo. Moving on without it.");
+
+			if (!NTM_TakeWaypoint(NTConfig_AfterGetBOWP)) {
+				NTC_SendMsgToScript("NTBotGame.ntj", "NTM_TakeWaypoint()");
+				return;
+			}
+
+			NTC_SendMsgToScript("NTBotGame.ntj", "SCRIPT_END");
+		}
+		NTC_Delay(1000);
+		counting++;
+	}
+
+	NTC_Delay(1500);
+	Print(COLOR_5 + "Thanks for BO!");
+	NTP_DoPrecast(true);
+
+	if(me.classid == NTC_CHAR_CLASS_SORCERESS) {
+		NTC_Delay(100);
+		NT_DoEnchant();
+		NT_DoEnchantMerc();
+	}
+
+	if (!NTM_TakeWaypoint(NTConfig_AfterGetBOWP)) {
+		NTC_SendMsgToScript("NTBotGame.ntj", "NTM_TakeWaypoint()");
+		return;
+	}
+
+	NTC_Delay(500);
+
+	NTC_SendMsgToScript("NTBotGame.ntj", "SCRIPT_END");
+}

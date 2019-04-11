@@ -1,0 +1,2 @@
+Simply copy and paste the ignorelist file into your Diablo 2 install directory.
+

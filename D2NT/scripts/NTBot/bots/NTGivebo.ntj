@@ -1,0 +1,116 @@
+/*
+*	Add these lines in char config:
+*	NTConfig_Script.push("NTGiveBO.ntj");
+*	NTConfig_BOWP = 35; // wp to give bo
+*	NTConfig_AfterBOWP = 103; // wp to take after
+*	BOThisGuy = "xYz"; // leader name goes here. BOThisGuy = "null"; or set to null for bo anyone who joins. good for public runs
+*	NTConfig_BoWait = 500000; // amount of time to wait before moving on
+*
+*/
+
+var _NTTMGR_BuyPots;
+var _NTTMGR_BuyTP; 
+var _NTTMGR_BuyID;// id in field add
+var _NTTMGR_BuyKey;
+var _NTTMGR_DoHeal;
+var _NTTMGR_DoID;
+var _NTTMGR_DoRepair;
+var _NTTMGR_DoRevive;
+var _NTTMGR_RemoveCurse;
+var _NTTMGR_Simple;
+var _NTTMGR_BuyArrows = false;
+
+
+function NTMain() {
+
+	Include("libs/common/NTCommon.ntl");
+	NTC_IncludeLibs();
+	NTC_IncludeConfig("NTBot/char_configs");
+
+	NT_LoadConfig();
+	NTSI_LoadNIPFiles("NTBot/item_configs");
+
+	NTA_Initialize();
+
+	if(!NTTM_CheckAct()) {
+		NTC_SendMsgToScript("NTBotGame.ntj", "NTTM_CheckAct()");
+		return;
+	}
+
+	NTTMGR_TownManager();
+
+	if(!NTTM_TownMove("waypoint")){
+		NTC_SendMsgToScript("NTBotGame.ntj", "NTTM_TownMove()");
+		return;
+	}
+
+	if(!NTM_TakeWaypoint(NTConfig_BOWP)) {
+		NTC_SendMsgToScript("NTBotGame.ntj", "NTM_TakeWaypoint()");
+		return;
+	}
+
+	Say("Come get bo!");
+	NTC_Delay(1000);
+
+	var counting = 0;
+
+	while(!NTBO_LookingforLeader(NTConfig_BOWP, BOThisGuy)) {
+		if(counting == NTConfig_BoWait && NTConfig_BoWait != 0) {
+			Say("Could not finder leader, skipping bo");
+
+			if(!NTM_TakeWaypoint(NTConfig_AfterBOWP)) {
+				NTC_SendMsgToScript("NTBotGame.ntj", "NTM_TakeWaypoint()");
+				return;
+			}
+
+			NTTM_TownMove("portalspot");
+			NTC_Delay(500);
+
+			NTC_SendMsgToScript("NTBotGame.ntj", "SCRIPT_END");
+		}
+
+		NTC_Delay(1000);
+		counting++;
+	}
+
+	Print(COLOR_5 + "Casting BO");
+	NTC_Delay(500);
+	NTP_DoPrecast(true);
+	
+	if(!NTM_TakeWaypoint(NTConfig_AfterBOWP)) {
+		NTC_SendMsgToScript("NTBotGame.ntj", "NTM_TakeWaypoint()");
+		return;
+	}
+
+	NTC_Delay(500);
+
+	NTC_SendMsgToScript("NTBotGame.ntj", "SCRIPT_END");
+}
+
+function NTBO_LookingforLeader(area, name) {
+	var _player;
+	var _myPartyId;
+	var _area;
+
+	_player = GetPlayerUnit();
+	_myPartyId = _player.partyid;
+
+	if(arguments.length < 1)
+		_area = me.areaid
+	if(arguments.length > 0)
+		_area = area;
+
+	do {
+		if(_player.areaid == _area && _myPartyId == _player.partyid) {
+			if(!name)
+				return true;
+			else if(_player.name == name)
+				return true;
+		}
+
+		NTC_Delay(100);
+
+	} while(_player.GetNext());
+
+	return false;
+}
