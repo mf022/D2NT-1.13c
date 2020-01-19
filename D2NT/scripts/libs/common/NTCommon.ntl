@@ -308,7 +308,6 @@ function NTC_IncludeLibs()
 	Include("libs/common/NTUtilities.ntl");
 	Include("libs/common/NTTools.ntl");
 	Include("libs/common/NTRunewords.ntl");
-	Include("libs/common/LazyManCoding.ntl");
 	//Include("libs/common/NTVoyage.ntl");
 	Include("libs/common/NTItemlogger.ntl");
 	Include("libs/common/NTColorConverter.ntl");
